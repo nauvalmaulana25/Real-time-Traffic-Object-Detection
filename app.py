@@ -53,7 +53,7 @@ stop_btn = st.sidebar.button("⏹️ Stop Stream", use_container_width=True)
 # 3. Load AI Model
 @st.cache_resource
 def load_model():
-    return YOLO(r"streets.pt")
+    return YOLO(r"streetsOptimized.pt")
 
 model = load_model()
 
@@ -91,3 +91,4 @@ if start_btn:
 
     cap.release()
     st.info("ℹ️ Stream stopped by user.")
+
