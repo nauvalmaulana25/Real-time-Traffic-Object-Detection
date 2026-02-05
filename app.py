@@ -44,7 +44,7 @@ class VideoCaptureThread:
 # --- LOAD ASSETS ---
 @st.cache_data
 def load_data():
-    with open('cctv_bekasi.json', 'r') as f:
+    with open('cctv_sources.json', 'r') as f:
         return json.load(f)
 
 @st.cache_resource
@@ -116,6 +116,7 @@ if start_btn:
 
     video_thread.stop()
     st.rerun() # Refresh aplikasi saat distop
+
 
 
 
