@@ -70,7 +70,7 @@ stop_btn = st.sidebar.button("⏹️ STOP")
 st.title("🚦 CCTV Traffic Recognition")
 with st.expander("📖 User Guide: How to use this application (Click to expand)"):
     st.markdown("""
-    Welcome! This application uses Artificial Intelligence (AI) to detect traffic and pedestrian in real-time via public CCTV feeds, resolution had to be scaled down due to low peformance of the host.
+    Welcome! This application uses Artificial Intelligence (AI) to detect traffic and pedestrian in real-time via public CCTV feeds, resolution had to be scaled down due to low peformance of the host. expect inaccuracies
     Follow these simple steps to get started:
     
     1. **Select a Location**: On the left sidebar, use the **'Select CCTV Location'** dropdown menu to choose the street you want to monitor.
@@ -116,5 +116,6 @@ if start_btn:
 
     video_thread.stop()
     st.rerun() # Refresh aplikasi saat distop
+
 
 
