@@ -91,7 +91,7 @@ if start_btn:
         # --- OPTIMIZATION STEPS ---
         # 1. Resize ke ukuran kecil untuk diproses AI (Sangat penting!)
         # YOLOv8 paling cepat pada 640px
-        frame_ai = cv2.resize(frame, (640, 360))
+        frame_ai = cv2.resize(frame, (416, 234))
 
         # 2. AI Inference
         # verbose=False mengurangi beban printing di terminal
@@ -115,3 +115,4 @@ if start_btn:
 
     video_thread.stop()
     st.success("Monitoring stopped.")
+
