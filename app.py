@@ -50,7 +50,7 @@ def load_data():
 @st.cache_resource
 def load_model():
     # Menggunakan model YOLO
-    return YOLO("streets.pt")
+    return YOLO("streetsOptimized.pt")
 
 cctv_data = load_data()
 model = load_model()
@@ -116,6 +116,7 @@ if start_btn:
 
     video_thread.stop()
     st.rerun() # Refresh aplikasi saat distop
+
 
 
 
