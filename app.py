@@ -2,126 +2,116 @@ import streamlit as st
 import cv2
 import json
 from ultralytics import YOLO
+import threading
 import time
 
-# --- Streamlit Page Configuration ---
-st.set_page_config(page_title="Traffic Object Detection", layout="wide")
+# --- Streamlit Configuration ---
+st.set_page_config(page_title="High-Speed Traffic Detection", layout="wide")
 
-# --- CSS CUSTOMIZATION (Optional: Agar tampilan lebih rapi) ---
-st.markdown("""
-<style>
-    div.stButton > button:first-child {
-        background-color: #FF4B4B;
-        color: white;
-    }
-    div.stButton > button:hover {
-        background-color: #FF0000;
-        color: white;
-    }
-</style>
-""", unsafe_allow_html=True)
+# --- CUSTOM CSS FOR SMOOTHNESS ---
+st.markdown("<style>img { border-radius: 10px; }</style>", unsafe_allow_html=True)
 
-# --- HEADER & TITLE ---
-st.title("🚦 Real-time Traffic Object Detection")
-st.subheader("AI-Powered Monitoring via Public CCTV Feeds")
+# --- CLASS UNTUK BACKGROUND FRAME GRABBER ---
+class VideoCaptureThread:
+    def __init__(self, url):
+        self.url = url
+        self.cap = cv2.VideoCapture(url)
+        self.ret = False
+        self.frame = None
+        self.stopped = False
+        # Thread untuk membaca frame
+        self.thread = threading.Thread(target=self.update, args=())
+        self.thread.daemon = True
 
-# --- SIDEBAR CONFIGURATION ---
-st.sidebar.header("⚙️ Configuration Panel")
+    def start(self):
+        self.thread.start()
+        return self
 
-# 1. Load CCTV Data
+    def update(self):
+        while not self.stopped:
+            if not self.cap.isOpened():
+                break
+            self.ret, self.frame = self.cap.read()
+            # Sedikit jeda agar tidak menghabiskan CPU untuk pembacaan saja
+            time.sleep(0.01)
+
+    def read(self):
+        return self.ret, self.frame
+
+    def stop(self):
+        self.stopped = True
+        self.cap.release()
+
+# --- LOAD ASSETS ---
 @st.cache_data
 def load_data():
-    try:
-        # Gunakan path relatif agar aman saat deploy
-        with open('cctv_sources.json', 'r') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        st.error("File 'cctv_sources.json' not found.")
-        return {}
+    with open('cctv_sources.json', 'r') as f:
+        return json.load(f)
 
-cctv_data = load_data()
-
-if cctv_data:
-    titles = [name.replace('_', ' ').title() for name in cctv_data.keys()]
-    urls = list(cctv_data.values())
-    
-    selected_index = st.sidebar.selectbox("📍 Select CCTV Location", range(len(titles)), format_func=lambda x: titles[x])
-else:
-    st.warning("No CCTV data available.")
-    titles, urls = [], []
-    selected_index = 0
-
-conf_threshold = st.sidebar.slider("🎯 Detection Confidence", 0.0, 1.0, 0.45, help="Semakin tinggi, AI semakin 'pemilih'.")
-
-# --- OPTIMIZATION SETTINGS ---
-st.sidebar.markdown("---")
-st.sidebar.subheader("🚀 Performance Optimizer")
-# Frame skipping: 1 = proses semua, 3 = proses 1 dari 3 frame (Hemat 66%)
-frame_skip = st.sidebar.slider("Frame Skipping (Higher = Faster)", 1, 5, 3, help="Loncat frame untuk meringankan beban CPU & Internet. Nilai 3 direkomendasikan.")
-
-st.sidebar.divider() 
-
-# Control Buttons
-col1, col2 = st.sidebar.columns(2)
-start_btn = col1.button("▶️ Start", use_container_width=True)
-stop_btn = col2.button("⏹️ Stop", use_container_width=True)
-
-# 2. Load AI Model
 @st.cache_resource
 def load_model():
-    # Pastikan menggunakan model yang ringan jika server terbatas
-    return YOLO("streets.pt") 
+    return YOLO("streets.pt")
 
-try:
-    model = load_model()
-except Exception as e:
-    st.error(f"Error loading model: {e}")
+cctv_data = load_data()
+model = load_model()
 
-# 3. Video Display Area
-if titles:
-    st.write(f"### Currently Monitoring: **{titles[selected_index]}**")
+# --- SIDEBAR UI ---
+st.sidebar.title("⚙️ Control Center")
+titles = [name.replace('_', ' ').title() for name in cctv_data.keys()]
+urls = list(cctv_data.values())
+selected_index = st.sidebar.selectbox("📍 Select CCTV", range(len(titles)), format_func=lambda x: titles[x])
+conf_threshold = st.sidebar.slider("🎯 Confidence", 0.0, 1.0, 0.4)
 
-st_frame = st.empty() # Placeholder image
+st.sidebar.divider()
+start_btn = st.sidebar.button("▶️ START MONITORING", use_container_width=True)
+stop_btn = st.sidebar.button("⏹️ STOP", use_container_width=True)
 
-# 4. Streaming Logic (Optimized)
+# --- MAIN DISPLAY ---
+st.title("🚦 High-Performance Traffic AI")
+st_frame = st.empty()
+
 if start_btn:
-    cap = cv2.VideoCapture(urls[selected_index])
+    # Inisialisasi Thread pembaca video
+    video_thread = VideoCaptureThread(urls[selected_index]).start()
     
-    if not cap.isOpened():
-        st.error("❌ Connection Failed. Server CCTV mungkin offline/sibuk.")
+    # Beri waktu buffer awal
+    time.sleep(2)
     
-    frame_count = 0
-    
-    while cap.isOpened() and not stop_btn:
-        ret, frame = cap.read()
-        if not ret:
-            st.warning("⚠️ Stream buffering or reconnecting...")
-            time.sleep(1) # Tunggu sebentar sebelum mencoba lagi agar tidak crash
-            cap = cv2.VideoCapture(urls[selected_index]) # Reconnect logic sederhana
-            continue
+    # Placeholder untuk FPS
+    fps_display = st.sidebar.empty()
+    prev_time = 0
 
-        frame_count += 1
-
-        # --- OPTIMISASI UTAMA: FRAME SKIPPING ---
-        # Hanya proses frame jika sisa bagi frame_count dengan frame_skip adalah 0
-        if frame_count % frame_skip != 0:
-            continue
-
-        # Resize gambar agar ringan dikirim ke browser (640px lebar sudah cukup jelas)
-        # Semakin kecil resolusi, semakin cepat streaming-nya.
-        frame = cv2.resize(frame, (640, 360))
-
-        # AI Inference
-        results = model(frame, conf=conf_threshold, verbose=False)
+    while not stop_btn:
+        ret, frame = video_thread.read()
         
-        # Plotting
-        annotated_frame = results[0].plot()
+        if not ret or frame is None:
+            st_frame.warning("Connecting to CCTV stream... please wait.")
+            continue
 
-        # Convert BGR (OpenCV) to RGB (Streamlit)
+        # --- OPTIMIZATION STEPS ---
+        # 1. Resize ke ukuran kecil untuk diproses AI (Sangat penting!)
+        # YOLOv8 paling cepat pada 640px
+        frame_ai = cv2.resize(frame, (640, 360))
+
+        # 2. AI Inference
+        # verbose=False mengurangi beban printing di terminal
+        results = model(frame_ai, conf=conf_threshold, verbose=False, stream=True)
+
+        # 3. Visualization
+        for r in results:
+            annotated_frame = r.plot()
+
+        # 4. Convert format warna
         annotated_frame = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
 
-        # Tampilkan
+        # 5. Display ke Streamlit
         st_frame.image(annotated_frame, channels="RGB", use_container_width=True)
 
-    cap.release()
-    st.info("ℹ️ Stream stopped.")
+        # 6. Hitung FPS Real-time
+        curr_time = time.time()
+        fps = 1 / (curr_time - prev_time) if prev_time != 0 else 0
+        prev_time = curr_time
+        fps_display.metric("Performance", f"{int(fps)} FPS")
+
+    video_thread.stop()
+    st.success("Monitoring stopped.")
