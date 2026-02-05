@@ -67,7 +67,7 @@ start_btn = st.sidebar.button("▶️ START MONITORING", use_container_width=Tru
 stop_btn = st.sidebar.button("⏹️ STOP", use_container_width=True)
 
 # --- MAIN DISPLAY ---
-st.title("🚦 High-Performance Traffic AI")
+st.title("🚦 Traffic Object Recognition")
 st_frame = st.empty()
 
 if start_btn:
@@ -115,3 +115,4 @@ if start_btn:
 
     video_thread.stop()
     st.success("Monitoring stopped.")
+
