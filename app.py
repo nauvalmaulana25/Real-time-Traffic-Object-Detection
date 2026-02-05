@@ -68,6 +68,19 @@ stop_btn = st.sidebar.button("⏹️ STOP")
 
 # --- MAIN DISPLAY ---
 st.title("🚦 Smart Traffic Monitoring")
+with st.expander("📖 User Guide: How to use this application (Click to expand)"):
+    st.markdown("""
+    Welcome! This application uses Artificial Intelligence (AI) to detect traffic objects in real-time via public CCTV feeds.
+    Follow these simple steps to get started:
+    
+    1. **Select a Location**: On the left sidebar, use the **'Select CCTV Location'** dropdown menu to choose the street you want to monitor.
+    2. **Adjust Sensitivity (Confidence)**: 
+        *   Move the slider to the **right** (higher value) to show only objects the AI is very certain about.
+        *   Move the slider to the **left** (lower value) to make the AI more sensitive, though it may occasionally misidentify objects.
+    3. **Start Detection**: Click the **'▶️ Start Stream'** button to begin the live AI analysis.
+    4. **Stop or Change Camera**: To stop the feed or switch to a different location, click the **'⏹️ Stop Stream'** button first.
+    5. **Technical Note**: If the video freezes or fails to load, it is likely due to an unstable internet connection or the source CCTV server being temporarily offline.
+    """)
 st_frame = st.empty()
 
 if start_btn:
@@ -103,3 +116,4 @@ if start_btn:
 
     video_thread.stop()
     st.rerun() # Refresh aplikasi saat distop
+
